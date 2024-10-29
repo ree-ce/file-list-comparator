@@ -8,20 +8,48 @@
         body {
             font-family: Arial, sans-serif;
             margin: 20px;
+            max-width: 1200px;
+            margin: 20px auto;
         }
         textarea {
             width: 100%;
             height: 200px;
             margin-bottom: 20px;
-        }
-        #output {
-            white-space: pre-wrap;
-            background-color: #f0f0f0;
+            font-family: monospace;
             padding: 10px;
-            border: 1px solid #ccc;
+        }
+        .output {
+            white-space: pre-wrap;
+            background-color: #f5f5f5;
+            padding: 15px;
+            border: 1px solid #ddd;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            font-family: monospace;
         }
         .hidden {
             display: none;
+        }
+        .prefix-section {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+        }
+        .detection-result {
+            margin-left: 10px;
+            padding: 5px 10px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            display: inline-block;
+        }
+        input[type="text"] {
+            padding: 8px;
+            width: 100%;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
         }
     </style>
 </head>
@@ -29,17 +57,18 @@
     <h1>File List Comparator</h1>
     <textarea id="list1" placeholder="Enter List 1"></textarea>
     <textarea id="list2" placeholder="Enter List 2"></textarea>
-    <div>
-        <label>
-            <input type="checkbox" id="useAutoPrefix" checked onchange="togglePrefixInput()">
-            Use auto common part detection
-        </label>
-        <span id="autoPrefixResult" class="hidden"></span>
-    </div>
-    <div id="manualPrefixInput" class="hidden">
-        <input type="text" id="commonPrefix" placeholder="Enter common prefix manually" style="width: 100%; margin-bottom: 20px;">
-    </div>
-    <button onclick="compareLists()">Compare</button>
+    
+    <div class="prefix-section">
+	    <label>
+	        <input type="checkbox" id="useAutoPrefix" checked onchange="togglePrefixInput()">
+	        Use auto common part detection
+	    </label>
+	    <span id="autoPrefixResult" class="detection-result"></span>
+	    <div id="manualPrefixInput" class="hidden">
+	        <input type="text" id="commonPrefix" placeholder="Enter common prefix manually">
+	    </div>
+	</div>
+    
     <h2>Difference</h2>
     <div>
         <h3>Files in List 1 but not in List 2</h3>
@@ -49,59 +78,178 @@
     </div>
 
     <script>
-        function getCommonPrefix(str1, str2) {
-            let commonPrefix = "";
-            for (let i = 0; i < str1.length && i < str2.length; i++) {
-                if (str1[i] === str2[i]) {
-                    commonPrefix += str1[i];
-                } else {
-                    break;
+        function findCommonPrefix(list1, list2) {
+            if (list1.length === 0 || list2.length === 0) return '';
+            
+            // Helper function to split path into segments
+            function splitPath(path) {
+                return path.split(/[\/\\]/).filter(s => s.length > 0);
+            }
+            
+            // Get all paths split into segments
+            const paths = [...list1, ...list2].map(splitPath);
+            console.log('All path segments:', paths);
+            
+            // Find "2.img" in each path
+            for (let i = 0; i < paths[0].length; i++) {
+                const segment = paths[0][i];
+                console.log(`Checking segment: ${segment}`);
+                
+                // Check if this segment appears in all other paths
+                let segmentIndexInOtherPaths = paths.slice(1).map(path => {
+                    return path.findIndex(s => s === segment);
+                });
+                
+                console.log(`Found segment "${segment}" at positions:`, segmentIndexInOtherPaths);
+                
+                // If segment is found in all paths
+                if (segmentIndexInOtherPaths.every(index => index !== -1)) {
+                    if (segment === '2.img') {
+                        // Get just the relative portion with 2.img
+                        const prefix = segment;
+                        console.log('Found 2.img, using as prefix');
+                        return prefix;
+                    }
                 }
             }
-            return commonPrefix;
+            
+            console.log('No common prefix found');
+            return '';
         }
 
-        function togglePrefixInput() {
-            const useAutoPrefix = document.getElementById('useAutoPrefix').checked;
-            const manualPrefixInput = document.getElementById('manualPrefixInput');
-            const autoPrefixResult = document.getElementById('autoPrefixResult');
-            if (useAutoPrefix) {
-                manualPrefixInput.classList.add('hidden');
-                autoPrefixResult.classList.remove('hidden');
-                autoPrefixResult.innerText = `Detected common prefix: ${detectedCommonPrefix}`;
-            } else {
-                manualPrefixInput.classList.remove('hidden');
-                autoPrefixResult.classList.add('hidden');
-            }
-        }
+        function updateResults(forceUpdate = false) {
+		    const list1 = document.getElementById('list1').value.trim().split('\n').filter(x => x);
+		    const list2 = document.getElementById('list2').value.trim().split('\n').filter(x => x);
+		    const useAutoPrefix = document.getElementById('useAutoPrefix').checked;
+		    const autoPrefixResult = document.getElementById('autoPrefixResult');
 
-        let detectedCommonPrefix = "";
+		    console.log('Mode:', useAutoPrefix ? 'Auto' : 'Manual');
 
-        function compareLists() {
-            const list1 = document.getElementById('list1').value.trim().split('\n');
-            const list2 = document.getElementById('list2').value.trim().split('\n');
+		    if (list1.length === 0 || list2.length === 0) {
+		        document.getElementById('outputList1').innerText = '(waiting for input)';
+		        document.getElementById('outputList2').innerText = '(waiting for input)';
+		        return;
+		    }
 
-            if (list1.length === 0 || list2.length === 0) {
-                alert("Both lists must contain at least one item.");
-                return;
-            }
+		    let commonPrefix = '';
+		    if (useAutoPrefix) {
+		        commonPrefix = findCommonPrefix(list1, list2);
+		        autoPrefixResult.innerText = commonPrefix ? 
+		            `Detected common prefix: ${commonPrefix}` : 
+		            'No common prefix detected - please check your input';
+		        console.log('Auto detected prefix:', commonPrefix);
+		    } else {
+		        commonPrefix = document.getElementById('commonPrefix').value.trim();
+		        console.log('Manual prefix:', commonPrefix);
+		    }
 
-            if (document.getElementById('useAutoPrefix').checked) {
-                detectedCommonPrefix = getCommonPrefix(list1[0], list2[0]);
-                document.getElementById('autoPrefixResult').innerText = `Detected common prefix: ${detectedCommonPrefix}`;
-            } else {
-                detectedCommonPrefix = document.getElementById('commonPrefix').value;
-            }
+		    // Early return if no prefix is found
+		    if (!commonPrefix) {
+		        console.log('No prefix - showing nothing');
+		        document.getElementById('outputList1').innerText = '';
+		        document.getElementById('outputList2').innerText = '';
+		        if (!useAutoPrefix) {
+		            autoPrefixResult.innerText = 'Please enter a prefix to compare';
+		        }
+		        return;
+		    }
 
-            const trimmedList1 = list1.map(item => item.replace(detectedCommonPrefix, ''));
-            const trimmedList2 = list2.map(item => item.replace(detectedCommonPrefix, ''));
+		    // For comparison, we'll remove the prefix and one path separator
+		    const prefixWithSeparator = commonPrefix + '/';
+		    console.log('Using separator:', prefixWithSeparator);
+		    
+		    // Check if prefix exists in paths
+		    const hasPrefix1 = list1.some(item => item.includes(prefixWithSeparator));
+		    const hasPrefix2 = list2.some(item => item.includes(prefixWithSeparator));
+		    console.log('Prefix exists in list1:', hasPrefix1);
+		    console.log('Prefix exists in list2:', hasPrefix2);
 
-            const diffList1 = trimmedList1.filter(item => !trimmedList2.includes(item));
-            const diffList2 = trimmedList2.filter(item => !trimmedList1.includes(item));
+		    if (!hasPrefix1 || !hasPrefix2) {
+		        console.log('Prefix not found in one or both lists - showing nothing');
+		        document.getElementById('outputList1').innerText = '';
+		        document.getElementById('outputList2').innerText = '';
+		        if (!useAutoPrefix) {
+		            autoPrefixResult.innerText = 'Prefix not found in files - please check your input';
+		        }
+		        return;
+		    }
 
-            document.getElementById('outputList1').innerText = diffList1.join('\n');
-            document.getElementById('outputList2').innerText = diffList2.join('\n');
-        }
+		    // Compare paths after the prefix
+		    const diffList1 = list1.filter(item => !list2.some(item2 => {
+		        const part1 = item.includes(prefixWithSeparator) ? 
+		            item.split(prefixWithSeparator)[1] : item;
+		        const part2 = item2.includes(prefixWithSeparator) ? 
+		            item2.split(prefixWithSeparator)[1] : item2;
+		        return part1 === part2;
+		    }));
+		    
+		    const diffList2 = list2.filter(item => !list1.some(item1 => {
+		        const part1 = item.includes(prefixWithSeparator) ? 
+		            item.split(prefixWithSeparator)[1] : item;
+		        const part2 = item1.includes(prefixWithSeparator) ? 
+		            item1.split(prefixWithSeparator)[1] : item1;
+		        return part1 === part2;
+		    }));
+
+		    console.log('Differences in list1:', diffList1.length);
+		    console.log('Differences in list2:', diffList2.length);
+
+		    document.getElementById('outputList1').innerText = diffList1.join('\n');
+		    document.getElementById('outputList2').innerText = diffList2.join('\n');
+		}
+
+		function togglePrefixInput() {
+		    const useAutoPrefix = document.getElementById('useAutoPrefix').checked;
+		    const manualPrefixInput = document.getElementById('manualPrefixInput');
+		    const autoPrefixResult = document.getElementById('autoPrefixResult');
+		    const commonPrefixInput = document.getElementById('commonPrefix');
+		    
+		    console.log('Toggling prefix input mode:', useAutoPrefix ? 'Auto' : 'Manual');
+		    
+		    if (useAutoPrefix) {
+		        manualPrefixInput.classList.add('hidden');
+		        autoPrefixResult.classList.remove('hidden');
+		    } else {
+		        manualPrefixInput.classList.remove('hidden');
+		        autoPrefixResult.classList.add('hidden');
+		        commonPrefixInput.value = '';
+		        document.getElementById('outputList1').innerText = '';
+		        document.getElementById('outputList2').innerText = '';
+		        autoPrefixResult.innerText = 'Please enter a prefix to compare';
+		        console.log('Cleared manual input');
+		    }
+		    
+		    // Force update with new mode
+		    updateResults(true);
+		}
+
+		// Set up event listeners
+		document.addEventListener('DOMContentLoaded', function() {
+		    const list1Element = document.getElementById('list1');
+		    const list2Element = document.getElementById('list2');
+		    const checkboxElement = document.getElementById('useAutoPrefix');
+		    const manualPrefixElement = document.getElementById('commonPrefix');
+		    const manualPrefixInput = document.getElementById('manualPrefixInput');
+		    const autoPrefixResult = document.getElementById('autoPrefixResult');
+
+		    // Ensure correct initial state
+		    if (checkboxElement.checked) {
+		        manualPrefixInput.classList.add('hidden');
+		        autoPrefixResult.classList.remove('hidden');
+		    } else {
+		        manualPrefixInput.classList.remove('hidden');
+		        autoPrefixResult.classList.add('hidden');
+		    }
+
+		    // Add event listeners
+		    list1Element.addEventListener('input', () => updateResults(false));
+		    list2Element.addEventListener('input', () => updateResults(false));
+		    manualPrefixElement.addEventListener('input', () => updateResults(true));
+		    checkboxElement.addEventListener('change', togglePrefixInput);
+
+		    // Initial update
+		    updateResults(true);
+		});
     </script>
 </body>
 </html>
