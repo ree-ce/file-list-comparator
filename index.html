@@ -34,13 +34,19 @@
             <input type="checkbox" id="useAutoPrefix" checked onchange="togglePrefixInput()">
             Use auto common part detection
         </label>
+        <span id="autoPrefixResult" class="hidden"></span>
     </div>
     <div id="manualPrefixInput" class="hidden">
         <input type="text" id="commonPrefix" placeholder="Enter common prefix manually" style="width: 100%; margin-bottom: 20px;">
     </div>
     <button onclick="compareLists()">Compare</button>
     <h2>Difference</h2>
-    <div id="output"></div>
+    <div>
+        <h3>Files in List 1 but not in List 2</h3>
+        <div id="outputList1" class="output"></div>
+        <h3>Files in List 2 but not in List 1</h3>
+        <div id="outputList2" class="output"></div>
+    </div>
 
     <script>
         function getCommonPrefix(str1, str2) {
@@ -58,12 +64,18 @@
         function togglePrefixInput() {
             const useAutoPrefix = document.getElementById('useAutoPrefix').checked;
             const manualPrefixInput = document.getElementById('manualPrefixInput');
+            const autoPrefixResult = document.getElementById('autoPrefixResult');
             if (useAutoPrefix) {
                 manualPrefixInput.classList.add('hidden');
+                autoPrefixResult.classList.remove('hidden');
+                autoPrefixResult.innerText = `Detected common prefix: ${detectedCommonPrefix}`;
             } else {
                 manualPrefixInput.classList.remove('hidden');
+                autoPrefixResult.classList.add('hidden');
             }
         }
+
+        let detectedCommonPrefix = "";
 
         function compareLists() {
             const list1 = document.getElementById('list1').value.trim().split('\n');
@@ -74,19 +86,21 @@
                 return;
             }
 
-            let commonPrefix;
             if (document.getElementById('useAutoPrefix').checked) {
-                commonPrefix = getCommonPrefix(list1[0], list2[0]);
+                detectedCommonPrefix = getCommonPrefix(list1[0], list2[0]);
+                document.getElementById('autoPrefixResult').innerText = `Detected common prefix: ${detectedCommonPrefix}`;
             } else {
-                commonPrefix = document.getElementById('commonPrefix').value;
+                detectedCommonPrefix = document.getElementById('commonPrefix').value;
             }
 
-            const trimmedList1 = list1.map(item => item.replace(commonPrefix, ''));
-            const trimmedList2 = list2.map(item => item.replace(commonPrefix, ''));
+            const trimmedList1 = list1.map(item => item.replace(detectedCommonPrefix, ''));
+            const trimmedList2 = list2.map(item => item.replace(detectedCommonPrefix, ''));
 
-            const diff = trimmedList1.filter(item => !trimmedList2.includes(item));
+            const diffList1 = trimmedList1.filter(item => !trimmedList2.includes(item));
+            const diffList2 = trimmedList2.filter(item => !trimmedList1.includes(item));
 
-            document.getElementById('output').innerText = diff.join('\n');
+            document.getElementById('outputList1').innerText = diffList1.join('\n');
+            document.getElementById('outputList2').innerText = diffList2.join('\n');
         }
     </script>
 </body>
