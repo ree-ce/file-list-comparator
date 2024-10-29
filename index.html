@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File List Comparator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        textarea {
+            width: 100%;
+            height: 200px;
+            margin-bottom: 20px;
+        }
+        #output {
+            white-space: pre-wrap;
+            background-color: #f0f0f0;
+            padding: 10px;
+            border: 1px solid #ccc;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>File List Comparator</h1>
+    <textarea id="list1" placeholder="Enter List 1"></textarea>
+    <textarea id="list2" placeholder="Enter List 2"></textarea>
+    <div>
+        <label>
+            <input type="checkbox" id="useAutoPrefix" checked onchange="togglePrefixInput()">
+            Use auto common part detection
+        </label>
+    </div>
+    <div id="manualPrefixInput" class="hidden">
+        <input type="text" id="commonPrefix" placeholder="Enter common prefix manually" style="width: 100%; margin-bottom: 20px;">
+    </div>
+    <button onclick="compareLists()">Compare</button>
+    <h2>Difference</h2>
+    <div id="output"></div>
+
+    <script>
+        function getCommonPrefix(str1, str2) {
+            let commonPrefix = "";
+            for (let i = 0; i < str1.length && i < str2.length; i++) {
+                if (str1[i] === str2[i]) {
+                    commonPrefix += str1[i];
+                } else {
+                    break;
+                }
+            }
+            return commonPrefix;
+        }
+
+        function togglePrefixInput() {
+            const useAutoPrefix = document.getElementById('useAutoPrefix').checked;
+            const manualPrefixInput = document.getElementById('manualPrefixInput');
+            if (useAutoPrefix) {
+                manualPrefixInput.classList.add('hidden');
+            } else {
+                manualPrefixInput.classList.remove('hidden');
+            }
+        }
+
+        function compareLists() {
+            const list1 = document.getElementById('list1').value.trim().split('\n');
+            const list2 = document.getElementById('list2').value.trim().split('\n');
+
+            if (list1.length === 0 || list2.length === 0) {
+                alert("Both lists must contain at least one item.");
+                return;
+            }
+
+            let commonPrefix;
+            if (document.getElementById('useAutoPrefix').checked) {
+                commonPrefix = getCommonPrefix(list1[0], list2[0]);
+            } else {
+                commonPrefix = document.getElementById('commonPrefix').value;
+            }
+
+            const trimmedList1 = list1.map(item => item.replace(commonPrefix, ''));
+            const trimmedList2 = list2.map(item => item.replace(commonPrefix, ''));
+
+            const diff = trimmedList1.filter(item => !trimmedList2.includes(item));
+
+            document.getElementById('output').innerText = diff.join('\n');
+        }
+    </script>
+</body>
+</html>
